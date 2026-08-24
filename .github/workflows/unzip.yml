@@ -1,0 +1,40 @@
+name: Unzip Project
+
+# One-time helper: extracts wheres-my-stuff.zip (if present in the repo root)
+# into the repo root, then commits the extracted files and removes the zip.
+# Run this once from the Actions tab, then delete this workflow.
+on:
+  workflow_dispatch:
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unzip project archive
+        run: |
+          if [ ! -f "wheres-my-stuff.zip" ]; then
+            echo "wheres-my-stuff.zip not found at repo root."
+            exit 1
+          fi
+          unzip -o wheres-my-stuff.zip -d extracted-tmp
+
+      - name: Move extracted files to repo root
+        run: |
+          # The zip contains a top-level "wheres-my-stuff/" folder — move its
+          # contents up to the repo root.
+          shopt -s dotglob
+          mv extracted-tmp/wheres-my-stuff/* .
+          rm -rf extracted-tmp
+          rm -f wheres-my-stuff.zip
+
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract project from zip" || echo "Nothing to commit"
+          git push
