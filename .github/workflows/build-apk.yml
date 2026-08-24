@@ -22,9 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install web app dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build web app
         run: npm run build
@@ -45,6 +46,15 @@ jobs:
           else
             npx cap sync android
           fi
+
+      - name: Prepare icon source images
+        run: |
+          mkdir -p assets
+          cp public/logo.png assets/icon.png
+          cp public/logo.png assets/icon-foreground.png
+
+      - name: Generate Android app icons
+        run: npx capacitor-assets generate --android
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
