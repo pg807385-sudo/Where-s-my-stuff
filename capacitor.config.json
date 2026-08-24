@@ -1,0 +1,12 @@
+{
+  "appId": "com.wheresmystuff.app",
+  "appName": "Where's My Stuff?",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -1,0 +1,199 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Sidebar, BottomNav } from './components/Navigation'
+import TopBar from './components/TopBar'
+import HomeView from './components/HomeView'
+import SearchView from './components/SearchView'
+import LocationsView from './components/LocationsView'
+import RemindersView from './components/RemindersView'
+import SettingsView from './components/SettingsView'
+import ItemFormModal from './components/ItemFormModal'
+import ItemDetailModal from './components/ItemDetailModal'
+import ConfirmDialog from './components/ConfirmDialog'
+import ToastStack from './components/ToastStack'
+import { useItems } from './hooks/useItems'
+import { useLocalStorage } from './hooks/useLocalStorage'
+import { useToasts } from './hooks/useToasts'
+
+export default function App() {
+  const { items, status, addItem, updateItem, deleteItem, clearAll, importItems } = useItems()
+  const [darkMode, setDarkMode] = useLocalStorage('wms:dark-mode', false)
+  const { toasts, showToast, dismissToast } = useToasts()
+
+  const [activeTab, setActiveTab] = useState('home')
+  const [query, setQuery] = useState('')
+  const [selectedLocation, setSelectedLocation] = useState(null)
+
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
+  const [detailItem, setDetailItem] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const knownLocations = useMemo(
+    () => [...new Set(items.map((i) => i.location).filter(Boolean))].sort(),
+    [items]
+  )
+
+  const openAdd = () => {
+    setEditingItem(null)
+    setFormOpen(true)
+  }
+
+  const openEdit = (item) => {
+    setDetailItem(null)
+    setEditingItem(item)
+    setFormOpen(true)
+  }
+
+  const handleFormSubmit = (data) => {
+    if (editingItem) {
+      updateItem(editingItem.id, data)
+      showToast(`${data.name} updated!`)
+    } else {
+      addItem(data)
+      showToast(`${data.name} saved!`)
+    }
+    setFormOpen(false)
+    setEditingItem(null)
+  }
+
+  const handleDeleteConfirmed = () => {
+    if (!deleteTarget) return
+    deleteItem(deleteTarget.id)
+    showToast(`${deleteTarget.name} deleted.`)
+    setDeleteTarget(null)
+    setDetailItem(null)
+  }
+
+  const handleGoToLocation = (loc) => {
+    setActiveTab('locations')
+    setSelectedLocation(loc)
+  }
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    if (tab !== 'locations') setSelectedLocation(null)
+  }
+
+  const sharedItemHandlers = {
+    onOpenItem: setDetailItem,
+    onEditItem: openEdit,
+    onDeleteItem: setDeleteTarget,
+  }
+
+  return (
+    <div className="min-h-screen flex bg-paper dark:bg-paper-dark">
+      <Sidebar active={activeTab} onChange={handleTabChange} onAdd={openAdd} />
+
+      <div className="flex-1 min-w-0 pb-24 md:pb-10">
+        <TopBar
+          active={activeTab}
+          query={query}
+          onQueryChange={(v) => {
+            setQuery(v)
+            if (activeTab !== 'search') setActiveTab('search')
+          }}
+          onSubmitSearch={() => setActiveTab('search')}
+          onAdd={openAdd}
+        />
+
+        <main className="px-4 md:px-8 pt-2">
+          {status === 'loading' && <LoadingGrid />}
+
+          {status === 'error' && (
+            <div className="text-center py-16">
+              <p className="text-sm text-clay-500 font-medium">
+                Something went wrong loading your items.
+              </p>
+              <p className="text-xs text-ink-faint dark:text-moss-500 mt-1">
+                Try refreshing the page.
+              </p>
+            </div>
+          )}
+
+          {status === 'ready' && (
+            <>
+              {activeTab === 'home' && (
+                <HomeView
+                  items={items}
+                  onAdd={openAdd}
+                  onGoToLocation={handleGoToLocation}
+                  {...sharedItemHandlers}
+                />
+              )}
+              {activeTab === 'search' && (
+                <SearchView items={items} query={query} {...sharedItemHandlers} />
+              )}
+              {activeTab === 'locations' && (
+                <LocationsView
+                  items={items}
+                  selectedLocation={selectedLocation}
+                  onSelectLocation={setSelectedLocation}
+                  {...sharedItemHandlers}
+                />
+              )}
+              {activeTab === 'reminders' && <RemindersView items={items} {...sharedItemHandlers} />}
+              {activeTab === 'settings' && (
+                <SettingsView
+                  darkMode={darkMode}
+                  onToggleDarkMode={() => setDarkMode((d) => !d)}
+                  items={items}
+                  onImport={(data) => {
+                    importItems(data)
+                    setActiveTab('home')
+                  }}
+                  onClearAll={clearAll}
+                  showToast={showToast}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
+      <BottomNav active={activeTab} onChange={handleTabChange} />
+
+      <ItemFormModal
+        open={formOpen}
+        onClose={() => {
+          setFormOpen(false)
+          setEditingItem(null)
+        }}
+        onSubmit={handleFormSubmit}
+        initialItem={editingItem}
+        knownLocations={knownLocations}
+      />
+
+      <ItemDetailModal
+        item={detailItem}
+        onClose={() => setDetailItem(null)}
+        onEdit={openEdit}
+        onDelete={setDeleteTarget}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Delete ${deleteTarget?.name || 'item'}?`}
+        description="This item will be permanently removed from this device. This cannot be undone."
+        confirmLabel="Delete"
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirmed}
+      />
+
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+    </div>
+  )
+}
+
+function LoadingGrid() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="skeleton h-24 rounded-tag" />
+      ))}
+    </div>
+  )
+}

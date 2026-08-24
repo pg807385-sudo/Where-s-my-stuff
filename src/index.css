@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-paper text-ink dark:bg-paper-dark dark:text-moss-100 antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.moss.300') transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: theme('colors.moss.300');
+    border-radius: 999px;
+  }
+  :focus-visible {
+    outline: 2px solid theme('colors.moss.500');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Signature element: the claim-tag card. A punched hole + notched edge,
+     like a luggage tag or inventory ticket, reinforcing the "where did I tag this" idea. */
+  .tag-card {
+    position: relative;
+    clip-path: polygon(
+      0% 0%, 100% 0%, 100% 100%, 0% 100%
+    );
+  }
+
+  .tag-hole {
+    position: relative;
+  }
+  .tag-hole::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: theme('colors.paper.DEFAULT');
+    border: 1.5px solid theme('colors.ink.faint' / 45%);
+    z-index: 10;
+  }
+  .dark .tag-hole::before {
+    background: theme('colors.card.dark');
+    border-color: theme('colors.moss.700');
+  }
+
+  .tag-stub {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      theme('colors.ink.faint' / 35%) 0,
+      theme('colors.ink.faint' / 35%) 4px,
+      transparent 4px,
+      transparent 9px
+    );
+  }
+
+  .label-chip {
+    @apply font-mono text-[11px] tracking-wide uppercase font-medium;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      theme('colors.moss.50') 0%,
+      theme('colors.moss.100') 50%,
+      theme('colors.moss.50') 100%
+    );
+    background-size: 800px 100%;
+    @apply animate-shimmer;
+  }
+  .dark .skeleton {
+    background: linear-gradient(90deg, #232821 0%, #2b3126 50%, #232821 100%);
+    background-size: 800px 100%;
+  }
+}
