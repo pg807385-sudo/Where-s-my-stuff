@@ -28,11 +28,12 @@ jobs:
       - name: Install Project Dependencies
         run: npm ci
 
-      - name: Install Compatible Capacitor 6 Plugins & Sync
-        run: |
-          npm install @capacitor/filesystem@^6.0.0 @capacitor/local-notifications@^6.0.0 --legacy-peer-deps
-          npx cap sync
+      - name: Install Compatible Capacitor 6 Plugins
+        run: npm install @capacitor/filesystem@^6.0.0 @capacitor/local-notifications@^6.0.0 --legacy-peer-deps
 
       - name: Build Web Production Bundle
         run: npm run build
+
+      - name: Sync Capacitor Native Projects
+        run: npx cap sync
         
