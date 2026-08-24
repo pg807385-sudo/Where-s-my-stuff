@@ -1,8 +1,5 @@
 name: Unzip Project
 
-# One-time helper: extracts wheres-my-stuff.zip (if present in the repo root)
-# into the repo root, then commits the extracted files and removes the zip.
-# Run this once from the Actions tab, then delete this workflow.
 on:
   workflow_dispatch:
 
@@ -24,10 +21,7 @@ jobs:
 
       - name: Move extracted files to repo root
         run: |
-          # The zip contains a top-level "wheres-my-stuff/" folder — move its
-          # contents up to the repo root.
-          shopt -s dotglob
-          mv extracted-tmp/wheres-my-stuff/* .
+          cp -a extracted-tmp/wheres-my-stuff/. .
           rm -rf extracted-tmp
           rm -f wheres-my-stuff.zip
 
