@@ -1,34 +1,165 @@
-name: Update Lockfile
+solution:
+  description: "Complete photo storage migration to @capacitor/filesystem with Git synchronization commands."
 
-# Regenerates package-lock.json from package.json and commits it back to the
-# repo. Run manually whenever package.json changes (new/updated dependencies)
-# so npm ci stays usable in build-apk.yml.
-on:
-  workflow_dispatch:
+  setup:
+    commands:
+      - npm install @capacitor/filesystem
+      - npx cap sync
 
-permissions:
-  contents: write
+  files:
+    - path: "src/utils/photoStorage.js"
+      type: "utility"
+      content: |
+        import { Filesystem, Directory } from '@capacitor/filesystem';
+        import { Capacitor } from '@capacitor/core';
 
-jobs:
-  update-lockfile:
-    runs-on: ubuntu-latest
+        const PHOTO_DIR = 'photos';
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+        export const initPhotoStorage = async () => {
+          if (!Capacitor.isNativePlatform()) return;
+          try {
+            await Filesystem.mkdir({
+              path: PHOTO_DIR,
+              directory: Directory.Data,
+              recursive: true,
+            });
+          } catch (err) {
+            // Folder already exists
+          }
+        };
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+        export const savePhoto = async (base64Data) => {
+          if (!base64Data) return '';
+          
+          if (!Capacitor.isNativePlatform()) {
+            return base64Data;
+          }
 
-      - name: Install dependencies (regenerates lockfile)
-        run: npm install
+          await initPhotoStorage();
 
-      - name: Commit updated lockfile
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "Update lockfile for @capacitor/assets" || echo "Nothing to commit"
-          git push
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.jpg`;
+          const relativePath = `${PHOTO_DIR}/${fileName}`;
+          
+          const cleanBase64 = base64Data.includes(',') 
+            ? base64Data.split(',')[1] 
+            : base64Data;
+
+          await Filesystem.writeFile({
+            path: relativePath,
+            data: cleanBase64,
+            directory: Directory.Data,
+          });
+
+          return relativePath;
+        };
+
+        export const getPhotoUrl = async (storedRef) => {
+          if (!storedRef) return '';
+
+          if (storedRef.startsWith('data:') || !Capacitor.isNativePlatform()) {
+            return storedRef;
+          }
+
+          try {
+            const uriResult = await Filesystem.getUri({
+              path: storedRef,
+              directory: Directory.Data,
+            });
+            return Capacitor.convertFileSrc(uriResult.uri);
+          } catch (err) {
+            console.error('Error resolving photo URI:', err);
+            return '';
+          }
+        };
+
+        export const deletePhoto = async (storedRef) => {
+          if (!storedRef || storedRef.startsWith('data:') || !Capacitor.isNativePlatform()) {
+            return;
+          }
+
+          try {
+            await Filesystem.deleteFile({
+              path: storedRef,
+              directory: Directory.Data,
+            });
+          } catch (err) {
+            console.warn('File deletion failed:', err);
+          }
+        };
+
+  integration_patterns:
+    save_item_flow:
+      description: "Save new image file and obtain relative path for localStorage payload."
+      code: |
+        import { savePhoto, deletePhoto } from '../utils/photoStorage';
+
+        const handleSaveItem = async (itemData, existingItem) => {
+          let photoPath = itemData.photo;
+
+          if (existingItem?.photo && existingItem.photo !== itemData.photo) {
+            await deletePhoto(existingItem.photo);
+          }
+
+          if (itemData.photo && itemData.photo.startsWith('data:')) {
+            photoPath = await savePhoto(itemData.photo);
+          }
+
+          const updatedItem = {
+            ...itemData,
+            photo: photoPath
+          };
+
+          // Save updatedItem array to localStorage...
+        };
+
+    render_item_flow:
+      description: "Asynchronously map relative paths or base64 sources to usable src URIs."
+      code: |
+        import React, { useState, useEffect } from 'react';
+        import { getPhotoUrl } from '../utils/photoStorage';
+
+        const ItemCard = ({ item }) => {
+          const [imageSrc, setImageSrc] = useState('');
+
+          useEffect(() => {
+            let isMounted = true;
+            
+            getPhotoUrl(item.photo).then((url) => {
+              if (isMounted) setImageSrc(url);
+            });
+
+            return () => {
+              isMounted = false;
+            };
+          }, [item.photo]);
+
+          return (
+            <div className="item-card">
+              {imageSrc ? (
+                <img src={imageSrc} alt={item.title} className="item-image" />
+              ) : (
+                <div className="placeholder">No Image</div>
+              )}
+              <h3>{item.title}</h3>
+            </div>
+          );
+        };
+
+    delete_item_flow:
+      description: "Remove file from disk when an item is removed."
+      code: |
+        import { deletePhoto } from '../utils/photoStorage';
+
+        const handleDeleteItem = async (itemToDelete) => {
+          if (itemToDelete.photo) {
+            await deletePhoto(itemToDelete.photo);
+          }
+          // Remove item from localStorage state array...
+        };
+
+  deployment:
+    git_commands:
+      - git add .
+      - git commit -m "refactor: replace base64 localStorage photo storage with @capacitor/filesystem"
+      - git push origin main
+      
