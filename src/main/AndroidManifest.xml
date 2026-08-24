@@ -1,0 +1,8 @@
+<!-- Android 13+ Runtime Permission -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+<!-- Standard Permissions & Vibration for Android 9+ -->
+<uses-permission android:name="android.permission.VIBRATE" />
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+<uses-permission android:name="android.permission.USE_EXACT_ALARM" />
