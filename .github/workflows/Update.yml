@@ -1,0 +1,34 @@
+name: Update Lockfile
+
+# Regenerates package-lock.json from package.json and commits it back to the
+# repo. Run manually whenever package.json changes (new/updated dependencies)
+# so npm ci stays usable in build-apk.yml.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-lockfile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (regenerates lockfile)
+        run: npm install
+
+      - name: Commit updated lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Update lockfile for @capacitor/assets" || echo "Nothing to commit"
+          git push
