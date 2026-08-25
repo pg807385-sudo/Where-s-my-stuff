@@ -1,61 +1,50 @@
 name: Build APK
 
-# Builds a debug Android APK of "Where's My Stuff?" using Capacitor and
-# uploads it as a downloadable workflow artifact. Trigger manually from the
-# Actions tab, or automatically on pushes to main.
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
-    paths-ignore:
-      - "**.md"
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      # Generate package-lock.json before setup-node attempts npm caching.
+      - name: Generate package-lock.json
+        run: npm install --package-lock-only
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - name: Install web app dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm install
 
       - name: Build web app
         run: npm run build
 
-      - name: Set up JDK 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Sync Capacitor
+        run: npx cap sync android
 
-      - name: Add Android platform (first run only)
-        run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          else
-            npx cap sync android
-          fi
-
-      - name: Make gradlew executable
-        run: chmod +x android/gradlew
-
-      - name: Build debug APK
+      - name: Build Android APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: wheres-my-stuff-debug-apk
-          path: android/app/build/outputs/apk/debug/Where-s-my-stuffs?.apk
-          if-no-files-found: error
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app.apk
