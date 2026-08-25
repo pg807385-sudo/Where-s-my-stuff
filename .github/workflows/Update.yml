@@ -1,14 +1,14 @@
 name: Update Project
 
 # Extracts wheres-my-stuff.zip (uploaded to the repo root) and commits its
-# contents into the repo, overwriting any files that changed. Run manually
-# from the Actions tab whenever you upload a fresh zip with updates.
+# contents into the repo, overwriting any files that changed. Uses a PAT
+# (WORKFLOW_PAT secret) instead of the default token, since GITHUB_TOKEN can
+# never push changes to .github/workflows/* files.
 on:
   workflow_dispatch:
 
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   update:
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.WORKFLOW_PAT }}
 
       - name: Unzip project archive
         run: |
