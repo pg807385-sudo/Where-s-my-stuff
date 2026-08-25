@@ -1,39 +1,41 @@
-name: Build and Sync Capacitor Mobile App
+name: Bootstrap Project
 
+# One-time setup for a brand-new repo: extracts wheres-my-stuff.zip (uploaded
+# to the repo root) and commits its full contents as the project. Run once,
+# then delete this workflow — build-apk.yml handles everything after that.
 on:
-  push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches:
-      - main
-      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build:
-    name: Build Web App and Sync Android Platform
+  bootstrap:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+      - name: Unzip project archive
+        run: |
+          if [ ! -f "wheres-my-stuff.zip" ]; then
+            echo "wheres-my-stuff.zip not found at repo root. Upload it first, then re-run this workflow."
+            exit 1
+          fi
+          rm -rf extracted-tmp
+          unzip -o wheres-my-stuff.zip -d extracted-tmp
 
-      - name: Install Project Dependencies
-        run: npm ci
+      - name: Move project files to repo root
+        run: |
+          cp -a extracted-tmp/wheres-my-stuff/. .
+          rm -rf extracted-tmp
+          rm -f wheres-my-stuff.zip
 
-      - name: Install Compatible Capacitor 6 Plugins
-        run: npm install @capacitor/filesystem@^6.0.0 @capacitor/local-notifications@^6.0.0 --legacy-peer-deps
-
-      - name: Build Web Production Bundle
-        run: npm run build
-
-      - name: Sync Capacitor Native Projects
-        run: npx cap sync
-        
+      - name: Commit project files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Bootstrap: add full Where's My Stuff? project" || echo "Nothing to commit"
+          git push
