@@ -4,6 +4,8 @@ name: Sync Project (Clean)
 # in the repo that isn't in the zip, so stray/leftover files from previous
 # partial updates get cleaned up too. Excludes public/ so your own
 # logo.png/favicon (which aren't part of this zip) are never touched.
+# Extracts to $RUNNER_TEMP (outside the repo checkout) so rsync's --delete
+# never gets confused about its own scratch folder.
 on:
   workflow_dispatch:
 
@@ -26,8 +28,8 @@ jobs:
             echo "wheres-my-stuff.zip not found at repo root. Upload it first, then re-run this workflow."
             exit 1
           fi
-          rm -rf extracted-tmp
-          unzip -o wheres-my-stuff.zip -d extracted-tmp
+          rm -rf "$RUNNER_TEMP/extracted"
+          unzip -o wheres-my-stuff.zip -d "$RUNNER_TEMP/extracted"
 
       - name: Mirror extracted files into repo root (deletes stray files, keeps public/)
         run: |
@@ -36,8 +38,7 @@ jobs:
             --exclude='public/' \
             --exclude='.github/workflows/Update.yml' \
             --exclude='.github/workflows/sync-project.yml' \
-            extracted-tmp/wheres-my-stuff/ .
-          rm -rf extracted-tmp
+            "$RUNNER_TEMP/extracted/wheres-my-stuff/" .
           rm -f wheres-my-stuff.zip
 
       - name: Commit clean project state
