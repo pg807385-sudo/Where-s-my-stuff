@@ -30,9 +30,6 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Sync with Capacitor
-        run: npm run cap:sync
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -46,6 +43,8 @@ jobs:
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
+          else
+            npx cap sync android
           fi
 
       - name: Make gradlew executable

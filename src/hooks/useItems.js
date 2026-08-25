@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { scheduleItemNotification, cancelNotification } from '../utils/notificationStorage'
 import { SAMPLE_ITEMS } from '../utils/sampleData'
 
 const STORAGE_KEY = 'wms:items'
@@ -42,20 +41,6 @@ export function useItems() {
       const loaded = loadItems()
       setItems(loaded)
       setStatus('ready')
-      
-      // Initialize reminders on app load
-      loaded.forEach((item) => {
-        if (item.reminder) {
-          scheduleItemNotification({
-            id: item.id,
-            title: `Reminder: ${item.name}`,
-            body: `Located at: ${item.location}`,
-            scheduleAt: item.reminder,
-          }).catch((err) => {
-            console.warn(`Failed to schedule reminder for ${item.id}:`, err)
-          })
-        }
-      })
     } catch (e) {
       setStatus('error')
     }
@@ -73,19 +58,6 @@ export function useItems() {
       createdAt: now,
       updatedAt: now,
     }
-    
-    // Schedule notification if reminder is set
-    if (newItem.reminder) {
-      scheduleItemNotification({
-        id: newItem.id,
-        title: `Reminder: ${newItem.name}`,
-        body: `Located at: ${newItem.location}`,
-        scheduleAt: newItem.reminder,
-      }).catch((err) => {
-        console.warn(`Failed to schedule reminder for ${newItem.id}:`, err)
-      })
-    }
-    
     setItems((prev) => {
       const next = [newItem, ...prev]
       persist(next)
@@ -96,8 +68,6 @@ export function useItems() {
 
   const updateItem = useCallback((id, data) => {
     setItems((prev) => {
-      const oldItem = prev.find((it) => it.id === id)
-      
       const next = prev.map((it) =>
         it.id === id
           ? {
@@ -108,40 +78,12 @@ export function useItems() {
           : it
       )
       persist(next)
-      
-      // Update reminder notification
-      if (oldItem && oldItem.reminder !== data.reminder) {
-        // Cancel old reminder
-        if (oldItem.reminder) {
-          cancelNotification(id).catch((err) => {
-            console.warn(`Failed to cancel reminder for ${id}:`, err)
-          })
-        }
-        
-        // Schedule new reminder
-        if (data.reminder) {
-          scheduleItemNotification({
-            id,
-            title: `Reminder: ${data.name || oldItem.name}`,
-            body: `Located at: ${data.location || oldItem.location}`,
-            scheduleAt: data.reminder,
-          }).catch((err) => {
-            console.warn(`Failed to schedule reminder for ${id}:`, err)
-          })
-        }
-      }
-      
       return next
     })
   }, [])
 
   const deleteItem = useCallback((id) => {
     setItems((prev) => {
-      // Cancel notification before deleting
-      cancelNotification(id).catch((err) => {
-        console.warn(`Failed to cancel reminder for ${id}:`, err)
-      })
-      
       const next = prev.filter((it) => it.id !== id)
       persist(next)
       return next
@@ -154,20 +96,6 @@ export function useItems() {
   }, [])
 
   const importItems = useCallback((incoming) => {
-    // Schedule reminders for all imported items
-    incoming.forEach((item) => {
-      if (item.reminder) {
-        scheduleItemNotification({
-          id: item.id,
-          title: `Reminder: ${item.name}`,
-          body: `Located at: ${item.location}`,
-          scheduleAt: item.reminder,
-        }).catch((err) => {
-          console.warn(`Failed to schedule reminder for ${item.id}:`, err)
-        })
-      }
-    })
-    
     setItems(() => {
       persist(incoming)
       return incoming
