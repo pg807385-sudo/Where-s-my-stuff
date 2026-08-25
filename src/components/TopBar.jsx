@@ -1,4 +1,4 @@
-import { Search, Plus } from 'lucide-react'
+import { Search, Tag, Plus } from 'lucide-react'
 
 const TITLES = {
   home: 'Home',
@@ -13,8 +13,8 @@ export default function TopBar({ active, query, onQueryChange, onSubmitSearch, o
     <header className="sticky top-0 z-40 bg-paper/90 dark:bg-paper-dark/90 backdrop-blur px-4 md:px-8 pt-5 pb-3 md:pt-8">
       <div className="flex items-center justify-between md:hidden mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden">
-            <img src="/logo.png" alt="Where's My Stuff? logo" className="w-full h-full object-contain" />
+          <div className="w-8 h-8 rounded-lg bg-moss-500 flex items-center justify-center">
+            <Tag size={15} className="text-white" strokeWidth={2.3} />
           </div>
           <span className="font-display font-semibold text-[16px] text-ink dark:text-moss-50">
             Where's My Stuff?

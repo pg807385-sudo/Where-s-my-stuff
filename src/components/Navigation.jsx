@@ -1,4 +1,4 @@
-import { Home, Search, MapPin, Bell, Settings, Plus } from 'lucide-react'
+import { Home, Search, MapPin, Bell, Settings, Tag, Plus } from 'lucide-react'
 
 const TABS = [
   { id: 'home', label: 'Home', icon: Home },
@@ -12,8 +12,8 @@ export function Sidebar({ active, onChange, onAdd }) {
   return (
     <aside className="hidden md:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-ink/[0.06] dark:border-moss-800 px-4 py-6">
       <div className="flex items-center gap-2 px-2 mb-8">
-        <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
-          <img src="/logo.png" alt="Where's My Stuff? logo" className="w-full h-full object-contain" />
+        <div className="w-9 h-9 rounded-xl bg-moss-500 flex items-center justify-center shrink-0">
+          <Tag size={17} className="text-white" strokeWidth={2.3} />
         </div>
         <span className="font-display font-semibold text-[17px] text-ink dark:text-moss-50 leading-tight">
           Where's My Stuff?

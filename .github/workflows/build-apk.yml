@@ -47,15 +47,6 @@ jobs:
             npx cap sync android
           fi
 
-      - name: Prepare icon source images
-        run: |
-          mkdir -p assets
-          cp public/logo.png assets/icon.png
-          cp public/logo.png assets/icon-foreground.png
-
-      - name: Generate Android app icons
-        run: npx capacitor-assets generate --android
-
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
