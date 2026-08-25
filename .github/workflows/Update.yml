@@ -1,9 +1,9 @@
-name: Update Project
+name: Sync Project (Clean)
 
-# Extracts wheres-my-stuff.zip (uploaded to the repo root) and commits its
-# contents into the repo, overwriting any files that changed. Uses a PAT
-# (WORKFLOW_PAT secret) instead of the default token, since GITHUB_TOKEN can
-# never push changes to .github/workflows/* files.
+# Makes the repo an EXACT mirror of wheres-my-stuff.zip — deletes any file
+# in the repo that isn't in the zip, so stray/leftover files from previous
+# partial updates get cleaned up too. Excludes public/ so your own
+# logo.png/favicon (which aren't part of this zip) are never touched.
 on:
   workflow_dispatch:
 
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  update:
+  sync:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,16 +29,21 @@ jobs:
           rm -rf extracted-tmp
           unzip -o wheres-my-stuff.zip -d extracted-tmp
 
-      - name: Move project files to repo root
+      - name: Mirror extracted files into repo root (deletes stray files, keeps public/)
         run: |
-          cp -a extracted-tmp/wheres-my-stuff/. .
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='public/' \
+            --exclude='.github/workflows/Update.yml' \
+            --exclude='.github/workflows/sync-project.yml' \
+            extracted-tmp/wheres-my-stuff/ .
           rm -rf extracted-tmp
           rm -f wheres-my-stuff.zip
 
-      - name: Commit project files
+      - name: Commit clean project state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Update project files" || echo "Nothing to commit"
+          git commit -m "Clean sync: mirror project exactly, remove stray files" || echo "Nothing to commit"
           git push
