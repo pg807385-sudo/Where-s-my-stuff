@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, Camera, Trash2, MapPin, Tag, AlignLeft, Bell } from 'lucide-react'
 
 const EMPTY = { name: '', location: '', description: '', photo: null, reminder: '' }
@@ -6,8 +6,17 @@ const EMPTY = { name: '', location: '', description: '', photo: null, reminder: 
 export default function ItemFormModal({ open, onClose, onSubmit, initialItem, knownLocations }) {
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState({})
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false)
   const fileInputRef = useRef(null)
   const nameInputRef = useRef(null)
+
+  const filteredLocations = useMemo(() => {
+    const q = form.location.trim().toLowerCase()
+    const matches = q
+      ? knownLocations.filter((loc) => loc.toLowerCase().includes(q) && loc.toLowerCase() !== q)
+      : knownLocations
+    return matches.slice(0, 6)
+  }, [form.location, knownLocations])
 
   useEffect(() => {
     if (open) {
@@ -23,6 +32,7 @@ export default function ItemFormModal({ open, onClose, onSubmit, initialItem, kn
         setForm(EMPTY)
       }
       setErrors({})
+      setShowLocationSuggestions(false)
       setTimeout(() => nameInputRef.current?.focus(), 50)
     }
   }, [open, initialItem])
@@ -107,7 +117,6 @@ export default function ItemFormModal({ open, onClose, onSubmit, initialItem, kn
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handlePhoto}
                 className="hidden"
               />
@@ -137,20 +146,38 @@ export default function ItemFormModal({ open, onClose, onSubmit, initialItem, kn
             required
             error={errors.location}
             input={
-              <>
+              <div className="relative">
                 <input
                   value={form.location}
-                  onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, location: e.target.value }))
+                    setShowLocationSuggestions(true)
+                  }}
+                  onFocus={() => setShowLocationSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 120)}
                   placeholder="Blue desk drawer"
-                  list="known-locations"
+                  autoComplete="off"
                   className={inputClass(errors.location)}
                 />
-                <datalist id="known-locations">
-                  {knownLocations.map((loc) => (
-                    <option key={loc} value={loc} />
-                  ))}
-                </datalist>
-              </>
+                {showLocationSuggestions && filteredLocations.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-ink border border-ink/10 dark:border-moss-800 rounded-2xl shadow-tagHover overflow-hidden z-20 max-h-40 overflow-y-auto">
+                    {filteredLocations.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setForm((f) => ({ ...f, location: loc }))
+                          setShowLocationSuggestions(false)
+                        }}
+                        className="w-full text-left px-3.5 py-2.5 text-sm text-ink dark:text-moss-50 hover:bg-moss-50 dark:hover:bg-moss-800 transition-colors"
+                      >
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             }
           />
 
@@ -215,4 +242,4 @@ function Field({ icon: Icon, label, input, error, required, optional }) {
       {error && <span className="text-[11px] text-clay-500 mt-1 block">{error}</span>}
     </label>
   )
-}
+    }
