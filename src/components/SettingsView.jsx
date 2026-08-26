@@ -84,6 +84,11 @@ export default function SettingsView({
           onClick={handleExport}
           control={<ChevronRight size={16} className="text-ink-faint dark:text-moss-600" />}
         />
+        <span
+                className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  darkMode ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
         <SettingsRow
           icon={Upload}
           label="Import data from JSON"
