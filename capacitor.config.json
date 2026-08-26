@@ -1,12 +1,15 @@
 {
   "appId": "com.wheresmystuff.app",
-  "appName": "Where's My Stuff?",
+  "appName": "Where's my stuff",
   "webDir": "dist",
   "bundledWebRuntime": false,
-  "server": {
-    "androidScheme": "https"
-  },
-  "android": {
-    "allowMixedContent": false
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_notification",
+      "iconColor": "#4285F4"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
   }
 }
