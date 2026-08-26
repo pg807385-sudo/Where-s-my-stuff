@@ -37,7 +37,7 @@ jobs:
           cp public/logo.png assets/icon-foreground.png
 
       - name: Generate Android app icons
-        run: npx capacitor-assets generate --android
+        run: npx --yes @capacitor/assets generate --android
 
       - name: Sync Capacitor
         run: npx cap sync android
