@@ -13,7 +13,6 @@ import ToastStack from './components/ToastStack'
 import { useItems } from './hooks/useItems'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useToasts } from './hooks/useToasts'
-// NEW: notification utilities
 import {
   requestNotificationPermission,
   scheduleReminder,
@@ -38,7 +37,6 @@ export default function App() {
   const [detailItem, setDetailItem] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
-  // Ref to access latest items inside the interval without restarting it
   const itemsRef = useRef(items)
   itemsRef.current = items
 
@@ -46,11 +44,9 @@ export default function App() {
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
 
-  // NEW: Request notification permission on first load
   useEffect(() => {
     requestNotificationPermission()
 
-    // Check immediately for reminders that became due while app was closed
     checkDueReminders(itemsRef.current, (item) => {
       showBrowserNotification(item)
       showToast(`Reminder: ${item.name} at ${item.location}`, 'error')
@@ -58,7 +54,6 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // NEW: Background check every 30s for due reminders while app is open
   useEffect(() => {
     const interval = setInterval(() => {
       checkDueReminders(itemsRef.current, (item) => {
@@ -87,10 +82,8 @@ export default function App() {
 
   const handleFormSubmit = (data) => {
     if (editingItem) {
-      // NEW: clear the old \"shown\" lock so the updated reminder can fire
       clearReminderShown(editingItem.id)
       updateItem(editingItem.id, data)
-      // NEW: schedule the updated reminder (or cancel if removed)
       if (data.reminder) {
         scheduleReminder({ ...editingItem, ...data })
       } else {
@@ -99,7 +92,6 @@ export default function App() {
       showToast(`${data.name} updated!`)
     } else {
       const newItem = addItem(data)
-      // NEW: schedule native reminder if set
       if (data.reminder) {
         scheduleReminder(newItem)
       }
@@ -111,7 +103,6 @@ export default function App() {
 
   const handleDeleteConfirmed = () => {
     if (!deleteTarget) return
-    // NEW: cancel the native reminder before deleting
     cancelReminder(deleteTarget.id)
     deleteItem(deleteTarget.id)
     showToast(`${deleteTarget.name} deleted.`)
@@ -129,7 +120,6 @@ export default function App() {
     if (tab !== 'locations') setSelectedLocation(null)
   }
 
-  // NEW: wrapped clearAll so we also wipe pending native notifications
   const handleClearAll = () => {
     cancelAllReminders()
     clearAll()
@@ -253,4 +243,5 @@ function LoadingGrid() {
       ))}
     </div>
   )
-        }
+}
+  
