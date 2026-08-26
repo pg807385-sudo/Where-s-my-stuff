@@ -1,56 +1,105 @@
-name: Build APK
+name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Generate package-lock.json
-        run: npm install --package-lock-only
-
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20.x'
+          cache: 'npm'
 
-      - run: npm install
+      - name: Install Dependencies
+        run: npm ci
 
-      - name: Install Capacitor Local Notifications plugin
-        run: npm install @capacitor/local-notifications@^6.1.2
+      # Define build script in package.json (e.g., "build": "vite build" or "ng build")
+      - name: Build Web Assets
+        run: npm run build
 
-      - run: npm run build
-
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          distribution: 'zulu'
+          java-version: '17'
 
-      - name: Add Android platform
-        run: npx cap add android
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Prepare icon source images
-        run: |
-          mkdir -p assets
-          cp public/logo.png assets/icon.png
-          cp public/logo.png assets/icon-foreground.png
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
 
-      - name: Generate Android app icons
-        run: npx --yes @capacitor/assets generate --android
-
-      - name: Sync Capacitor
+      # -------------------------------------------------------------------------
+      # CORE CAPACITOR STEP: Syncs web assets and config to Android project
+      # -------------------------------------------------------------------------
+      - name: Capacitor Sync Android
         run: npx cap sync android
 
-      - name: Build Android APK
-        working-directory: android
-        run: ./gradlew assembleDebug
+      # -------------------------------------------------------------------------
+      # CRUCIAL STEP: Inject Notification Icon and Fallback Meta-Data
+      # This moves the icon from web assets into native Android resources.
+      # -------------------------------------------------------------------------
+      - name: Inject Notification Assets and Meta-Data
+        run: |
+          # 1. Define Paths
+          SRC_ICON="./src/assets/ic_notification.png"
+          RES_DIR="./android/app/src/main/res"
+          MANIFEST="./android/app/src/main/AndroidManifest.xml"
 
-      - uses: actions/upload-artifact@v4
+          # 2. Check if source icon exists before proceeding
+          if [ ! -f "$SRC_ICON" ]; then
+            echo "Error: Source icon not found at $SRC_ICON. Please verify Step 1."
+            exit 1
+          fi
+
+          # 3. Create target resource directories
+          mkdir -p $RES_DIR/drawable
+          mkdir -p $RES_DIR/drawable-mdpi
+          mkdir -p $RES_DIR/drawable-hdpi
+          mkdir -p $RES_DIR/drawable-xhdpi
+          mkdir -p $RES_DIR/drawable-xxhdpi
+          mkdir -p $RES_DIR/drawable-xxxhdpi
+
+          # 4. Copy icon to Android drawable resources (handling different densities)
+          cp $SRC_ICON $RES_DIR/drawable/ic_notification.png
+          cp $SRC_ICON $RES_DIR/drawable-mdpi/ic_notification.png
+          cp $SRC_ICON $RES_DIR/drawable-hdpi/ic_notification.png
+          cp $SRC_ICON $RES_DIR/drawable-xhdpi/ic_notification.png
+          cp $SRC_ICON $RES_DIR/drawable-xxhdpi/ic_notification.png
+          cp $SRC_ICON $RES_DIR/drawable-xxxhdpi/ic_notification.png
+
+          # 5. Inject meta-data tags into AndroidManifest.xml before </application>
+          # This forces Android to use the icon if the push payload doesn't specify one.
+          # The color defined here matches the 'iconColor' in your capacitor.config.json.
+          sed -i '/<\/application>/i \        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_notification" />' $MANIFEST
+          sed -i '/<\/application>/i \        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:value="#4285F4" />' $MANIFEST
+
+          echo "✅ Notification assets and manifest meta-data injected successfully."
+
+      # -------------------------------------------------------------------------
+      # BUILD STEP
+      # -------------------------------------------------------------------------
+      - name: Build Android APK (Debug)
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      # -------------------------------------------------------------------------
+      # ARTIFACT UPLOAD STEP
+      # -------------------------------------------------------------------------
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
