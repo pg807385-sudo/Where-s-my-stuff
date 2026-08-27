@@ -158,3 +158,7 @@ export async function openExactAlarmSettings() {
     console.error('Failed to open exact alarm settings', e)
   }
 }
+// Aliases matching older/alternate names used elsewhere in the app.
+export const requestNotificationPermission = initNotifications
+export const scheduleReminder = scheduleReminderNotification
+export const cancelReminder = cancelReminderNotification
